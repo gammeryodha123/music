@@ -19,8 +19,6 @@ PIPED_SERVERS = [
     "https://pipedapi.qdi.at",
     "https://pipedapi.r4fo.com",
     "https://api.piped.privacy.com.de",
-    "https://pipedapi.darkness.services",
-    "https://pipedapi.astartes.nl"
 ]
 
 TRENDING = [
@@ -31,7 +29,7 @@ TRENDING = [
     {"url":"https://www.youtube.com/watch?v=kJQP7kiw5Fk","title":"LUIS FONSI - DESPACITO","thumbnail":"https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg","channel":"LUIS FONSI"},
 ]
 
-HTML = """
+HTML_PAGE = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -91,27 +89,27 @@ body{background:linear-gradient(180deg,#1a1a1a 0%,#000 100%);color:#fff;min-heig
 </style>
 </head>
 <body>
-<div id="installBanner"><span>📲 INSTALL YODHA</span><button onclick="installPWA()" style="background:#000;color:#fff;border:none;padding:8px 14px;border-radius:20px;font-weight:800">INSTALL</button><button onclick="installBanner.style.display='none'" style="background:none;border:none">✕</button></div>
+<div id="installBanner"><span>INSTALL YODHA</span><button onclick="installPWA()" style="background:#000;color:#fff;border:none;padding:8px 14px;border-radius:20px;font-weight:800">INSTALL</button><button onclick="installBanner.style.display='none'" style="background:none;border:none">X</button></div>
 <div id="loginScreen"><div class="card">
 <h1>YODHA</h1><p>YMP-PRO.ONRENDER.COM • PWA • 13 SERVERS</p>
 <input id="email" placeholder="EMAIL"><input id="password" type="password" placeholder="PASSWORD">
 <button class="btn btn-green" onclick="login()">LOGIN</button>
 <button class="btn btn-dark" onclick="signup()">CREATE ACCOUNT</button>
 <button class="btn btn-white" onclick="googleLogin()">CONTINUE WITH GOOGLE</button>
-<button class="btn btn-dark" onclick="githubLogin()">🐙 CONTINUE WITH GITHUB</button>
+<button class="btn btn-dark" onclick="githubLogin()">CONTINUE WITH GITHUB</button>
 <p id="msg" style="color:#ff5555;font-size:11px;margin-top:8px;text-transform:none"></p>
 </div></div>
 <div class="header"><h2>YODHA</h2><button onclick="auth.signOut()" style="background:#222;color:#fff;border:none;padding:8px 14px;border-radius:20px;font-size:11px;font-weight:800">LOGOUT</button></div>
-<div class="searchWrap"><div class="searchBox">🔍<input id="q" placeholder="SEARCH SONGS..." onkeypress="if(event.key=='Enter')doSearch()"><button onclick="doSearch()" style="background:#1DB954;border:none;color:#000;padding:7px 14px;border-radius:20px;font-weight:900">GO</button></div></div>
+<div class="searchWrap"><div class="searchBox"><input id="q" placeholder="SEARCH SONGS..." onkeypress="if(event.key=='Enter')doSearch()"><button onclick="doSearch()" style="background:#1DB954;border:none;color:#000;padding:7px 14px;border-radius:20px;font-weight:900">GO</button></div></div>
 <div class="tabs">
 <button class="tab active" id="tab-home" onclick="showTab('home')">HOME</button>
 <button class="tab" id="tab-search" onclick="showTab('search')">SEARCH</button>
 <button class="tab" id="tab-queue" onclick="showTab('queue')">QUEUE <span id="qCount"></span></button>
 <button class="tab" id="tab-recent" onclick="showTab('recent')">RECENT</button>
-<button class="tab" id="tab-liked" onclick="showTab('liked')">LIKED ❤️</button>
+<button class="tab" id="tab-liked" onclick="showTab('liked')">LIKED</button>
 </div>
 <div class="main">
-<div id="homeTab"><div class="sectionTitle">🔥 TRENDING TODAY</div><div class="grid" id="trendingGrid"></div><div class="sectionTitle">🎧 MADE FOR YOU</div><div id="forYouList"></div></div>
+<div id="homeTab"><div class="sectionTitle">TRENDING TODAY</div><div class="grid" id="trendingGrid"></div><div class="sectionTitle">MADE FOR YOU</div><div id="forYouList"></div></div>
 <div id="searchTab" style="display:none"><div id="searchList"></div></div>
 <div id="queueTab" style="display:none"><div id="queueList"></div></div>
 <div id="recentTab" style="display:none"><div id="recentList"></div></div>
@@ -134,7 +132,7 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth(), db=firebase.firestore();
 let currentList=[], currentIndex=0, currentSong=null, userData={recent:[],liked:[]}, allSongs=[], queue=[], isShuffle=false, isRepeat=false;
 const audio=document.getElementById('audio');
-const trending = %s;
+const trending = __TRENDING__;
 auth.onAuthStateChanged(async u=>{
  if(u){loginScreen.style.display='none';
   let s=await db.collection('users').doc(u.uid).get(); if(s.exists) userData=s.data(); else {userData={recent:[],liked:[]}; await db.collection('users').doc(u.uid).set(userData);}
@@ -153,7 +151,7 @@ async function githubLogin(){try{await auth.signInWithPopup(new firebase.auth.Gi
 function showTab(t){document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+t).classList.add('active');homeTab.style.display=t=='home'?'block':'none';searchTab.style.display=t=='search'?'block':'none';queueTab.style.display=t=='queue'?'block':'none';recentTab.style.display=t=='recent'?'block':'none';likedTab.style.display=t=='liked'?'block':'none';}
 async function save(){if(auth.currentUser) await db.collection('users').doc(auth.currentUser.uid).set(userData);}
 function addToQueue(s){queue.push(s);renderQueue();}
-function renderQueue(){qCount.innerText=queue.length?`(${queue.length})`:'';queueList.innerHTML=queue.length?queue.map((s,i)=>`<div class="listSong"><img src="${s.thumbnail}"><div class="info"><b>${s.title}</b><small>${s.channel}</small></div><button class="addBtn" onclick="queue.splice(${i},1);renderQueue()">✕</button></div>`).join(''):'<p style="padding:30px;color:#555;text-align:center">QUEUE EMPTY</p>';}
+function renderQueue(){qCount.innerText=queue.length?`(${queue.length})`:'';queueList.innerHTML=queue.length?queue.map((s,i)=>`<div class="listSong"><img src="${s.thumbnail}"><div class="info"><b>${s.title}</b><small>${s.channel}</small></div><button class="addBtn" onclick="queue.splice(${i},1);renderQueue()">X</button></div>`).join(''):'<p style="padding:30px;color:#555;text-align:center">QUEUE EMPTY</p>';}
 function renderRecent(){recentList.innerHTML=(userData.recent||[]).map((s,i)=>`<div class="listSong" onclick="playFrom('recent',${i})"><img src="${s.thumbnail}"><div class="info"><b>${s.title}</b><small>${s.channel}</small></div></div>`).join('')||'<p style="padding:30px;color:#555;text-align:center">NO RECENT</p>';}
 function renderLiked(){likedList.innerHTML=(userData.liked||[]).map((s,i)=>`<div class="listSong" onclick="playFrom('liked',${i})"><img src="${s.thumbnail}"><div class="info"><b>${s.title}</b><small>${s.channel}</small></div></div>`).join('')||'<p style="padding:30px;color:#555;text-align:center">NO LIKED YET</p>';if(currentSong) likeBtn.innerText=(userData.liked||[]).find(x=>x.url==currentSong.url)?'❤️':'🤍';}
 async function doSearch(){
@@ -165,7 +163,7 @@ function playAtTrending(i){currentList=trending;currentIndex=i;play(currentList[
 function playAt(i){currentList=allSongs;currentIndex=i;play(currentList[i]);}
 function playFrom(l,i){currentList=userData[l];currentIndex=i;play(currentList[i]);}
 async function play(song){
- currentSong=song;playerBox.style.display='block';pImg.src=song.thumbnail;pTitle.innerText=song.title;pArtist.innerText=song.channel;status.innerText='LOADING ⚡';playBtn.innerText='⏳';
+ currentSong=song;playerBox.style.display='block';pImg.src=song.thumbnail;pTitle.innerText=song.title;pArtist.innerText=song.channel;status.innerText='LOADING';playBtn.innerText='...';
  userData.recent=userData.recent.filter(s=>s.url!=song.url);userData.recent.unshift(song);userData.recent=userData.recent.slice(0,50);save();renderAll();
  try{
   let res=await fetch('/stream?url='+encodeURIComponent(song.url));let data=await res.json();
@@ -190,41 +188,75 @@ audio.onended=()=>{next();}
 </script>
 </body>
 </html>
-""" % str(TRENDING)
+"""
 
 @app.route("/")
-def home(): return render_template_string(HTML)
+def home():
+    html = HTML_PAGE.replace("__TRENDING__", str(TRENDING))
+    return render_template_string(html)
+
 @app.route("/manifest.json")
 def manifest():
-    return jsonify({"name":"YODHA","short_name":"YODHA","description":"YODHA - MUSIC APP","start_url":"/","display":"standalone","background_color":"#000000","theme_color":"#1DB954","icons":[{"src":"/icon-192","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"/icon-512","sizes":"512x512","type":"image/png","purpose":"any maskable"}]})
+    return jsonify({
+        "name": "YODHA",
+        "short_name": "YODHA",
+        "description": "YODHA - MUSIC APP",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#000000",
+        "theme_color": "#1DB954",
+        "icons": [
+            {"src": "/icon-192", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": "/icon-512", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+        ]
+    })
+
 @app.route("/sw.js")
 def sw():
-    js="const CACHE='YODHA-V1';const ASSETS=['/','/manifest.json','/icon-192','/icon-512'];self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});self.addEventListener('fetch',e=>{if(e.request.url.includes('/search')||e.request.url.includes('/stream')||e.request.url.includes('/lyrics')){return fetch(e.request);}e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{return caches.open(CACHE).then(c=>{c.put(e.request,res.clone());return res;})}).catch(()=>caches.match('/'))));});"
+    js = "const CACHE='YODHA-V2';const ASSETS=['/','/manifest.json','/icon-192','/icon-512'];self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});self.addEventListener('fetch',e=>{if(e.request.url.includes('/search')||e.request.url.includes('/stream')||e.request.url.includes('/lyrics')){return fetch(e.request);}e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{caches.open(CACHE).then(c=>{c.put(e.request,res.clone())});return res;}).catch(()=>caches.match('/'))));});"
     return Response(js, mimetype='application/javascript')
+
 @app.route("/icon-<int:size>")
 def icon(size):
-    if size not in [192,512]: size=192
+    if size not in [192, 512]:
+        size = 192
     try:
         from PIL import Image, ImageDraw, ImageFont
         from io import BytesIO
-        img=Image.new('RGB',(size,size),'#000000');draw=ImageDraw.Draw(img);draw.ellipse([size*0.08,size*0.08,size*0.92,size*0.92],fill='#1DB954')
-        try: font=ImageFont.truetype("DejaVuSans-Bold.ttf",int(size*0.22))
-        except: font=None
-        text="YODHA";bbox=draw.textbbox((0,0),text,font=font);w=bbox[2]-bbox[0];h=bbox[3]-bbox[1];draw.text(((size-w)/2,(size-h)/2 - size*0.05),text,fill='black',font=font)
-        buf=BytesIO();img.save(buf,format='PNG');buf.seek(0);return Response(buf.getvalue(),mimetype='image/png')
-    except: return Response(requests.get(f"https://via.placeholder.com/{size}/1DB954/000000?text=YODHA").content,mimetype='image/png')
+        img = Image.new('RGB', (size, size), '#000000')
+        draw = ImageDraw.Draw(img)
+        draw.ellipse([size*0.08, size*0.08, size*0.92, size*0.92], fill='#1DB954')
+        try:
+            font = ImageFont.truetype("DejaVuSans-Bold.ttf", int(size*0.22))
+        except:
+            font = None
+        text = "YODHA"
+        bbox = draw.textbbox((0, 0), text, font=font)
+        w = bbox[2] - bbox[0]
+        h = bbox[3] - bbox[1]
+        draw.text(((size - w) / 2, (size - h) / 2), text, fill='black', font=font)
+        buf = BytesIO()
+        img.save(buf, format='PNG')
+        buf.seek(0)
+        return Response(buf.getvalue(), mimetype='image/png')
+    except Exception:
+        return Response(requests.get(f"https://via.placeholder.com/{size}/1DB954/000000?text=YODHA").content, mimetype='image/png')
 
 @app.route("/search")
 def search():
-    q=request.args.get("q","").strip()
-    if not q: return jsonify([])
-    if q.lower() in search_cache: return jsonify(search_cache[q.lower()])
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify([])
+    q_lower = q.lower()
+    if q_lower in search_cache:
+        return jsonify(search_cache[q_lower])
     for server in PIPED_SERVERS:
         try:
-            r=requests.get(f"{server}/search?q={urllib.parse.quote(q)}&filter=music_songs",timeout=5,headers={'User-Agent':'Mozilla/5.0'})
-            if r.status_code==200:
-                items=r.json().get('items',[])[:15];res=[]
+            url = f"{server}/search?q={urllib.parse.quote(q)}&filter=music_songs"
+            r = requests.get(url, timeout=5, headers={'User-Agent': 'Mozilla/5.0'})
+            if r.status_code == 200:
+                data = r.json()
+                items = data.get('items', [])[:15]
+                res = []
                 for e in items:
-                    u=e.get('url','');vid=u.split('v=')[-1].split('&')[0] if 'v=' in u else u.split('/')[-1].split('?')[0]
-                    if len(vid)<6: continue
-                    res.append({"url":f"https://www.youtube.com/watch?v={vid}","title":e.get('title','Unknown').upper(),"thumbnail":e.get('thumbnail') or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg","channel":e.get('uploaderName','YouTube').upper()})
+                    u = e.get('url', '')
