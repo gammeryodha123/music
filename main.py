@@ -1,11 +1,14 @@
 from flask import Flask, request, jsonify, render_template_string, Response
-import os, urllib.parse, requests, time
+import os, urllib.parse, requests, time, json
 from dotenv import load_dotenv
 load_dotenv()
+
 app = Flask(__name__)
 
+# Cache with expiry
 search_cache = {}
 stream_cache = {}
+CACHE_TIME = 60 * 30 # 30 mins
 
 PIPED_SERVERS = [
     "https://pipedapi.kavin.rocks",
@@ -192,7 +195,7 @@ audio.onended=()=>{next();}
 
 @app.route("/")
 def home():
-    html = HTML_PAGE.replace("__TRENDING__", str(TRENDING))
+    html = HTML_PAGE.replace("__TRENDING__", json.dumps(TRENDING))
     return render_template_string(html)
 
 @app.route("/manifest.json")
@@ -213,50 +216,44 @@ def manifest():
 
 @app.route("/sw.js")
 def sw():
-    js = "const CACHE='YODHA-V2';const ASSETS=['/','/manifest.json','/icon-192','/icon-512'];self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});self.addEventListener('fetch',e=>{if(e.request.url.includes('/search')||e.request.url.includes('/stream')||e.request.url.includes('/lyrics')){return fetch(e.request);}e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{caches.open(CACHE).then(c=>{c.put(e.request,res.clone())});return res;}).catch(()=>caches.match('/'))));});"
+    js = "const CACHE='YODHA-V3';const ASSETS=['/','/manifest.json','/icon-192','/icon-512'];self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});self.addEventListener('fetch',e=>{if(e.request.url.includes('/search')||e.request.url.includes('/stream')||e.request.url.includes('/lyrics')){return fetch(e.request);}e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{caches.open(CACHE).then(c=>{c.put(e.request,res.clone())});return res;}).catch(()=>caches.match('/'))));});"
     return Response(js, mimetype='application/javascript')
 
 @app.route("/icon-<int:size>")
 def icon(size):
-    if size not in [192, 512]:
-        size = 192
+    if size not in [192, 512]: size = 192
     try:
         from PIL import Image, ImageDraw, ImageFont
         from io import BytesIO
         img = Image.new('RGB', (size, size), '#000000')
         draw = ImageDraw.Draw(img)
         draw.ellipse([size*0.08, size*0.08, size*0.92, size*0.92], fill='#1DB954')
-        try:
-            font = ImageFont.truetype("DejaVuSans-Bold.ttf", int(size*0.22))
-        except:
-            font = None
+        try: font = ImageFont.truetype("DejaVuSans-Bold.ttf", int(size*0.22))
+        except: font = None
         text = "YODHA"
         bbox = draw.textbbox((0, 0), text, font=font)
-        w = bbox[2] - bbox[0]
-        h = bbox[3] - bbox[1]
-        draw.text(((size - w) / 2, (size - h) / 2), text, fill='black', font=font)
-        buf = BytesIO()
-        img.save(buf, format='PNG')
-        buf.seek(0)
+        w, h = bbox[2]-bbox[0], bbox[3]-bbox[1]
+        draw.text(((size-w)/2, (size-h)/2), text, fill='black', font=font)
+        buf = BytesIO(); img.save(buf, format='PNG'); buf.seek(0)
         return Response(buf.getvalue(), mimetype='image/png')
     except Exception:
-        return Response(requests.get(f"https://via.placeholder.com/{size}/1DB954/000000?text=YODHA").content, mimetype='image/png')
+        return Response(requests.get(f"https://via.placeholder.com/{size}/1DB954/000000?text=YODHA", timeout=5).content, mimetype='image/png')
+
+def get_video_id(url):
+    if "v=" in url: return url.split("v=")[-1].split("&")[0].split("?")[0]
+    return url.strip().split("/")[-1].split("?")[0]
 
 @app.route("/search")
 def search():
     q = request.args.get("q", "").strip()
-    if not q:
-        return jsonify([])
+    if not q: return jsonify([])
     q_lower = q.lower()
     if q_lower in search_cache:
-        return jsonify(search_cache[q_lower])
+        data, ts = search_cache[q_lower]
+        if time.time() - ts < CACHE_TIME:
+            return jsonify(data)
+
     for server in PIPED_SERVERS:
         try:
-            url = f"{server}/search?q={urllib.parse.quote(q)}&filter=music_songs"
-            r = requests.get(url, timeout=5, headers={'User-Agent': 'Mozilla/5.0'})
-            if r.status_code == 200:
-                data = r.json()
-                items = data.get('items', [])[:15]
-                res = []
-                for e in items:
-                    u = e.get('url', '')
+            r = requests.get(f"{server}/search?q={urllib.parse.quote(q)}&filter=music_songs", timeout=6, headers={'User-Agent': 'Mozilla/5.0'})
+            if 
