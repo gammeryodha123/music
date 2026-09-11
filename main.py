@@ -277,17 +277,51 @@ def stream():
         except Exception:
             continue
     return jsonify({"error": "ALL BUSY"}), 500
-
-@app.route("/stream2")
-def stream2():
+@app.route("/stream")
+def stream():
     url = request.args.get("url", "")
     if "v=" in url:
         vid = url.split("v=")[-1].split("&")[0]
     else:
         vid = url.split("/")[-1].split("?")[0]
+
+    if vid in stream_cache:
+        if time.time() - stream_cache[vid]['t'] < 1800:
+            return jsonify({"url": stream_cache[vid]['url']})
+
+    # TRY FASTEST SERVER FIRST
+    servers = [
+        "https://pipedapi.kavin.rocks",
+        "https://pipedapi.moomoo.me",
+        "https://api.piped.privacydev.net",
+        "https://pipedapi.adminforge.de",
+    ]
+
+    for server in servers:
+        try:
+            r = requests.get(server + "/streams/" + vid, timeout=4, headers={'User-Agent': 'Mozilla/5.0'})
+            if r.status_code == 200:
+                j = r.json()
+                aud = j.get('audioStreams', [])
+                if aud:
+                    # pick m4a 128kbps - fastest
+                    for a in aud:
+                        if 'm4a' in a.get('mimeType',''):
+                            stream_cache[vid] = {'url': a['url'], 't': time.time()}
+                            return jsonify({"url": a['url']})
+                    best = sorted(aud, key=lambda x: x.get('bitrate', 0), reverse=True)[0]
+                    stream_cache[vid] = {'url': best['url'], 't': time.time()}
+                    return jsonify({"url": best['url']})
+                if j.get('hls'):
+                    stream_cache[vid] = {'url': j.get('hls'), 't': time.time()}
+                    return jsonify({"url": j.get('hls')})
+        except:
+            continue
+
+    # IF ALL PIPED FAIL -> DIRECT YT-DLP (SLOW BUT NEVER TIMES OUT)
     try:
         import yt_dlp
-        ydl_opts = {'format': 'bestaudio', 'quiet': True}
+        ydl_opts = {'format': 'bestaudio[ext=m4a]/bestaudio', 'quiet': True, 'noplaylist': True}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info("https://www.youtube.com/watch?v=" + vid, download=False)
             u = info.get('url')
@@ -295,20 +329,6 @@ def stream2():
                 stream_cache[vid] = {'url': u, 't': time.time()}
                 return jsonify({"url": u})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    return jsonify({"error": "FAIL"}), 500
+        print("YT-DLP FAIL", e)
 
-@app.route("/lyrics")
-def lyrics_route():
-    title = request.args.get("title", "")
-    try:
-        r = requests.get("https://lrclib.net/api/search?track_name=" + urllib.parse.quote(title), timeout=5)
-        d = r.json()
-        if d and d[0].get('plainLyrics'):
-            return jsonify({"lyrics": d[0]['plainLyrics'][:6000]})
-    except Exception:
-        pass
-    return jsonify({"lyrics": "NOT FOUND"})
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    return jsonify({"error": "TRY AGAIN"}), 500
